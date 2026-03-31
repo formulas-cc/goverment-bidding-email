@@ -26,8 +26,9 @@ from govb_email.config import get_email_config
 
 def _import_fetcher():
     """延迟导入避免循环依赖"""
-    from govb_fetcher.fetcher import fetch_all_bidding
-    return fetch_all_bidding
+    from govb_fetcher.fetcher import fetch_all_bidding, save_to_excel
+    from govb_fetcher.config import get_output_dir
+    return fetch_all_bidding, save_to_excel, get_output_dir
 
 
 def get_high_recommend_items(results: dict) -> dict:
@@ -45,8 +46,10 @@ def get_high_recommend_items(results: dict) -> dict:
     # 北京政采
     for record in results.get('北京政采', []):
         if record.get('推荐等级') == '高':
+            lot_name = record.get('标段名称', '').strip()
+            proj_name = record.get('项目名称', '').strip()
             result['bjzc'].append({
-                'title': record.get('项目名称', '')[:50],
+                'title': (lot_name or proj_name)[:50],
                 'method': record.get('招标方式', ''),
                 'budget': record.get('合同估价(元)', ''),
                 'purchaser': record.get('采购人', ''),
@@ -221,12 +224,17 @@ def send_bidding_report(date=None, keywords=None, to_override=None):
     print(f"[INFO] 开始抓取商机信息 - 日期: {date}")
 
     # 抓取数据
-    fetch_all_bidding = _import_fetcher()
+    fetch_all_bidding, save_to_excel, get_output_dir = _import_fetcher()
     results = fetch_all_bidding(date, keywords=keywords)
 
     bjzc_count = len(results.get('北京政采', []))
     hnzc_count = len(results.get('湖南政采', []))
     print(f"[INFO] 采集完成: 北京政采{bjzc_count}条, 湖南政采{hnzc_count}条")
+
+    # 保存 Excel
+    output_path = get_output_dir() / f'政府采购商机汇总_{date}.xlsx'
+    save_to_excel(results, output_path)
+    print(f"[INFO] Excel 已保存: {output_path}")
 
     # 发送邮件
     send_email(date, results, to_override=to_override)
