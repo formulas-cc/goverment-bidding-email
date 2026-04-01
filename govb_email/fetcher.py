@@ -68,13 +68,14 @@ def get_high_recommend_items(results: dict) -> dict:
     return result
 
 
-def send_email(date_str, results, to_override=None):
+def send_email(date_str, results, excel_path, to_override=None):
     """
     发送商机报告邮件。
 
     Args:
         date_str: 报告日期字符串，格式 YYYY-MM-DD
         results: fetch_all_bidding 返回的字典
+        excel_path: Excel 附件文件路径（由 get_output_dir() 计算）
         to_override: 覆盖默认收件人，用于测试发送
     """
     env_config = get_email_config()
@@ -122,11 +123,6 @@ def send_email(date_str, results, to_override=None):
 详情请见附件Excel。
 
 {sender_name}"""
-
-    # 获取Excel文件路径
-    excel_path = os.path.expanduser(
-        f"~/.openclaw/workspace/govb-bidding/政府采购商机汇总_{date_str}.xlsx"
-    )
 
     # 确定收件人/抄送人
     if to_override:
@@ -237,7 +233,7 @@ def send_bidding_report(date=None, keywords=None, to_override=None):
     print(f"[INFO] Excel 已保存: {output_path}")
 
     # 发送邮件
-    send_email(date, results, to_override=to_override)
+    send_email(date, results, output_path, to_override=to_override)
 
     return results
 
